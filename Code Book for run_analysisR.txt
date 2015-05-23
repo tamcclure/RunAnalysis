@@ -1,0 +1,101 @@
+Code Book for run_analysis.R
+
+Experimental Study Design:
+The run_analysis.R script creates two dataframe databases (“finaldata” and “TidyData”) from the raw data obtained from The Human Activity Recognition database that was collected from the accelerometers from the Samsung Galaxy S II smartphone.  The Human Activity Recognition database was built from the recordings of 30 subjects performing activities of daily living (ADL) while carrying a waist-mounted smartphone with embedded inertial sensors.  The experiments were conducted with a group of 30 volunteers between 19-48 years. Each individual performed six activities (WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS, SITTING, STANDING, LAYING) while wearing a Samsung Galaxy S II smartphone on their waist. By using its embedded accelerometer and gyroscope, data was captured for the 3-axial linear acceleration and 3-axial angular velocity at a constant rate of 50Hz. The experiments had to be video-recorded to label the data manually.  70% of the volunteers were selected for generating the training data and 30% for the test data, which resulted in two main databases. 
+
+The run_analysis.R scripts combines the test and training data to create one dataframe for the Human Activity Recognition database.  It then creates a subsetted Human Activity Recognition database using only the data in the columns descriptions containing “mean” or “std”.  It then, subsequently, creates a second database summarizing the subsetted data by finding the mean of all its columns sorted by subject and activity in ascending order.
+
+Source Data Information: 
+The raw data used from The Human Activity Recognition database is provided at:
+https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip
+
+A description of the Information for this raw data is obtained at the following site: http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones
+
+Summary:
+The run_analysis.R script creates two dataframe databases:  “finaldata” and “TidyData”.  The Human Activity Recognition data was combined into one database using the train (subject,x,y) data, testing (subject,x,y) data, activity_labels data and features.txt data.  The run_analysis.R scripts creates a “finaldata” database that provides a subset of this combined Human Activity Recognition data using only columns with “mean” or “std” descriptions.  The “TidyData” database summarizes the data from the “finaldata” dataframe to find the mean of all its columns sorted by subject and activity in ascending order.  
+
+run_analysis.R  Variables:
+
+Please note that all frequency data are in Hertz units (Hz) and all times are in seconds (sec).
+Files for  features and activity labels data
+features = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/features.txt",header=F)
+activityType = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/
+activity_labels.txt",header=F)
+
+Columns labels for activityType
+colnames(activityType) = c("activityId","activityType")
+
+Test data files  
+subtest = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/test
+/subject_test.txt",header=F)
+ytest = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/test/Y_test.txt",header=F)
+xtest = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/test/X_test.txt",header=F)
+
+Column label variables prior to column binding test files(“finaltest”)
+colnames(subtest) = "subjectId"
+colnames(xtest) = features[,2]
+colnames(ytest) = "activityId"
+finaltest = cbind(ytest,subtest,xtest)
+
+Train data files
+subtrain = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/train/
+subject_train.txt",header=F)
+ytrain = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/train/Y_train.txt",header=F)
+xtrain = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/train/X_train.txt",header=F)
+
+Column label variables prior to column binding train files (“finaltrain”)
+colnames(subtrain) = "subjectId"
+colnames(xtrain) = features[,2]
+colnames(ytrain) = "activityId"
+finaltrain = cbind(ytrain,subtrain,xtrain)
+
+fdata is the result of row binding final train and test data files
+fdata = rbind(finaltrain,finaltest)
+
+Used a logical to subset only columns with instances of “mean” or” std” labels to obtain the finaldata data.frame
+colNames = colnames(fdata)
+stdmeanlogical = (grepl("activity..",colNames)|grepl("subject..",colNames)|grepl("-mean..",colNames)&grepl("-meanFreq..",colNames)&grepl("mean..",colNames)|grepl("-std..",colNames)&grepl("std..",colNames))
+finaldata = fdata[stdmeanlogical==T]
+
+Merged final data and activityType data files and changed the descriptive column labels for the new “finaldata” data.frame
+finaldata = merge(finaldata,activityType,by="activityId",all.x=T)
+colNames = colnames(finaldata)
+L = length(colNames)
+for (i in 1:L){
+  colNames[i] = gsub("\\()","",colNames[i])
+  colNames[i] = gsub("-std$","StdDev",colNames[i])
+  colNames[i] = gsub("-mean","Mean",colNames[i])
+  colNames[i] = gsub("^(t)","time",colNames[i])
+  colNames[i] = gsub("^(f)","freq",colNames[i])
+  colNames[i] = gsub("[Gg]ravity","Gravity",colNames[i])
+  colNames[i] = gsub("[Bb]ody[Bb]ody|[Bb]ody","Body",colNames[i])
+  colNames[i] = gsub("[Gg]yro","Gyro",colNames[i])
+  colNames[i] = gsub("AccMag","AccMagnitude",colNames[i])
+  colNames[i] = gsub("[Bb]odyaccjerkmag","BodyAccJerkMagnitude",colNames[i])
+  colNames[i] = gsub("JerkMag","JerkMagnitude",colNames[i])
+  colNames[i] = gsub("GyroMag","GyroMagnitude",colNames[i])
+}
+colnames(finaldata) = colNames
+
+The first database  “finaldata” printed in tidy data format
+print(finaldata)
+
+Using the “finaldata” database, a second database was created called TidyData with the means of all columns sorted by subject and activity:
+
+Removed activityType Column, then grouped data, then arranged data by subjectId and activityId
+NoActData = finaldata[,names(finaldata)!="activityType"]
+groupData = group_by(NoActData,activityId,subjectId)
+arrangeData = arrange(groupData,subjectId,activityId)
+
+Aggregated data by activityID and subjectId; and removed duplicate columns for subjectId and activityId
+aggData = aggregate(arrangeData,list(activityId=arrangeData$activityId,subjectId=
+arrangeData$subjectId),mean)
+rm_duplicate_cols = aggData[,-c(1,2)]
+
+Merged activityType and aggregated data file, then arranged subjectId by ascending order and activityId by ascending order
+TData = merge(activityType,rm_duplicate_cols,by="activityId",all.x=T)
+TidyData = arrange(TData,subjectId,activityId)
+
+Write TidyData to text file using tab delimiter
+write.table(TidyData,"./Cousera/UCI HAR Dataset/TidyData.txt",row.names=FALSE, sep="\t")
+
