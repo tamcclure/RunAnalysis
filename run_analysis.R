@@ -1,4 +1,7 @@
-run_analysis.R<-#Read features and activity labels data
+run_analysis.R<-#Load libraries
+  library(dplyr)
+  library(tidyr)
+  #Read features and activity labels data
   features<-read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/features.txt",header=F)
 activityType<-read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/activity_labels.txt",header=F)
 
@@ -26,13 +29,15 @@ finaltrain<-cbind(ytrain,subtrain,xtrain)
 #Row bind final train and test data files
 fdata<-rbind(finaltrain,finaltest)
 
+#List column names for fdata in order to subset only columns with mean or std labels
 colNames<-colnames(fdata)
-#print(colNames)
 stdmeanlogical<-(grepl("activity..",colNames)|grepl("subject..",colNames)|grepl("-mean..",colNames)&grepl("-meanFreq..",colNames)&grepl("mean..",colNames)|grepl("-std..",colNames)&grepl("std..",colNames))
 finaldata<-fdata[stdmeanlogical==T]
+
+#Merge final data and activityType data files and change descriptive column labels
 finaldata<-merge(finaldata,activityType,by="activityId",all.x=T)
 colNames<-colnames(finaldata)
-#print(colNames)
+
 L<-length(colNames)
 for (i in 1:L){
   colNames[i]<-gsub("\\()","",colNames[i])
@@ -49,14 +54,23 @@ for (i in 1:L){
   colNames[i]<-gsub("GyroMag","GyroMagnitude",colNames[i])
 }
 colnames(finaldata)<-colNames
+
 print(finaldata)
 
+#Create a new TidyData set with the means of all columns sorted by subject and activity, then write to a text file
+#Remove activityType Column, then group data, then arrange data by subjectId and activityId
 NoActData<-finaldata[,names(finaldata)!="activityType"]
-groupData<-group_by(NoActData,activityId,subjectId)
-arrangeData<-arrange(groupData,subjectId,activityId)
-aggData<-aggregate(arrangeData,list(activityId=arrangeData$activityId,subjectId=arrangeData$subjectId),mean)
-rm_duplicate_cols<-aggData[,-c(1,2)]
+  groupData<-group_by(NoActData,activityId,subjectId)
+  arrangeData<-arrange(groupData,subjectId,activityId)
+
+#Aggregate by activityID and subjectId; also remove duplicate columns for subjectId and activityId
+  aggData<-aggregate(arrangeData,list(activityId=arrangeData$activityId,subjectId=arrangeData$subjectId),mean)
+  rm_duplicate_cols<-aggData[,-c(1,2)]
+
+#Merge activityType and aggregated data file, then arrange subjectId by ascending order
 TData<-merge(activityType,rm_duplicate_cols,by="activityId",all.x=T)
 TidyData<-arrange(TData,subjectId,activityId)
-#View(TidyData)
+
+#Write TidyData to text file
 write.table(TidyData,"./Cousera/UCI HAR Dataset/TidyData.txt",row.names=FALSE,sep="\t")
+
