@@ -17,6 +17,11 @@ The run_analysis.R script creates two dataframe databases:  “finaldata” and “Tid
 run_analysis.R  Variables:
 
 Please note that all frequency data are in Hertz units (Hz) and all times are in seconds (sec).
+
+The following libraries were used:
+  library(dplyr)
+  library(tidyr)
+
 Files for  features and activity labels data
 features = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/features.txt",header=F)
 activityType = read.table("C:/Users/Dana/Documents/Cousera/UCI HAR Dataset/
